@@ -1,0 +1,306 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>reveal.js</title>
+
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/black.css">
+    <link rel="stylesheet" href="css/presentation.css">
+
+    <!-- Theme used for syntax highlighting of code -->
+    <link rel="stylesheet" href="lib/css/zenburn.css">
+
+    <!-- Printing and PDF exports -->
+    <script>
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = window.location.search.match(/print-pdf/gi) ? 'css/print/pdf.css' : 'css/print/paper.css';
+        document.getElementsByTagName('head')[0].appendChild(link);
+    </script>
+</head>
+<body>
+<div class="reveal">
+    <div class="slides">
+        <section>
+            <h2>Automation using containers and puppet</h2>
+        </section>
+        <section class="left">
+            <h2>Container, container, container</h2>
+            <p>Tl;dr simpler, more powerful "virtual machines"</p>
+            <p>Docker is <strong>not</strong> container technology</p>
+            <p class="center"><img src="images/not-enough-containers.png"></p> <!-- todo save again -->
+        </section>
+        <section class="left">
+            <h2>Examples</h2>
+            <ul>
+                <li>
+                    LXC (Linux Containers) by <!-- todo authors? -->
+                    <ul style="list-style-type: none">
+                        <li>
+                            <small>Built into the Linux Kernel as of version 2.6.24</small>
+                        </li>
+                    </ul>
+                </li>
+                <li>
+                    libcontainer by Docker Inc.
+                    <ul style="list-style-type: none">
+                        <li>
+                            <small>Use any driver that follows the Open Container Initiative specifications</small>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </section>
+        <section>
+            <section>
+                <h2>Why Containers?</h2>
+                <ul>
+                    <li class="fragment">Speed - boots in seconds <span class="fragment">(not minutes)</span></li>
+                    <li class="fragment">Smaller footprint - run many more containers vs virtual machines</li>
+                    <li class="fragment">"Still a VM"</li>
+                    <li class="fragment">Cost</li>
+                </ul>
+            </section>
+            <section>
+                <h2>Isolated and namespaced</h2>
+                <ul>
+                    <li class="fragment">
+                        Privileged and unprivileged mode
+                        <ul style="list-style-type: none">
+                            <li>
+                                <small><!-- todo what's the difference? --></small>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="fragment">
+                        Own file system
+                        <ul style="list-style-type: none">
+                            <li>
+                                <small>Can be any Linux Container on any other Linux Host</small>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="fragment">
+                        Secure
+                        <ul style="list-style-type: none;">
+                            <li>
+                                <small>Container A and B can’t see each other without networking setup</small>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="fragment">
+                        Own networking
+                        <ul style="list-style-type: none">
+                            <li>
+                                <small>Container can be fully exposed</small>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="fragment">
+                        Resources can be restricted
+                        <ul style="list-style-type: none;">
+                            <li>
+                                <small>Accomplished using Linux's Control Groups (cgroups)</small>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="fragment">
+                        Users different from parent
+                        <ul>
+                            <li>
+                                <small>User ids and group ids can be shared</small>
+                            </li>
+                            <li>
+                                <small>Container’s user id 0 != host’s user id 0 (unless running a privileged container
+                                    <!-- todo check this is correct -->)
+                                </small>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+        </section>
+        <section class="left">
+            <section>
+                <h2>LXC "vs" Docker?</h2>
+                <p class="center"><img src="images/containers-vs-vms.png" alt="Containers vs VMs"></p>
+                <p class="pull-right">
+                    <small>Image &copy; Docker Inc</small>
+                </p>
+            </section>
+            <section>
+                <h2>LXC "vs" Docker?</h2>
+                <p>LXC and Docker are NOT equivalents</p>
+                <p class="fragment">LXC is container technology</p>
+                <p class="fragment">Docker is an platform built on top container technology</p>
+                <ul>
+                    <li class="fragment">Can use either libcontainer or lxc</li>
+                    <li class="fragment">Default used to be lxc, changed to libcontainer</li>
+                </ul>
+                <p class="fragment">LXC has a smaller learning curve <span class="fragment">(much smaller)</span></p>
+                <p class="fragment">Simpler and more low-level</p>
+            </section>
+        </section>
+        <section class="left">
+            <section>
+                <h2>LXC Lifecycle</h2>
+                <p>Simple lifecycle!</p>
+                <div class="fragment">
+                    <p>Create the container</p>
+                    <pre><code class="hlbash" data-trim>
+                    $ lxc-create --template download \
+        --name "$container_name" \
+            -- \
+                --dist ubuntu \
+                --release trusty \
+                --arch amd64
+                </code></pre>
+                    <p>List other templates</p>
+                    <pre><code class="hlbash" data-trim>
+                    $ ls -l /usr/share/lxc/templates
+$ /usr/share/lxc/templates/lxc-download --help
+                </code></pre>
+                </div>
+            </section>
+            <section>
+                <p>Start it!</p>
+                <pre><code class="hlbash" data-trim>
+                    lxc-start --name "$container_name" --daemon
+                </code></pre>
+                <div class="fragment">
+                    <p>Wait for the container to be in a specific state</p>
+                    <pre><code class="hlbash" data-trim>
+                        lxc-wait --name "$container_name" --state "RUNNING"
+                    </code></pre>
+                </div>
+                <div class="fragment">
+                    <p>States</p>
+                    <ul style="font-size: 60%">
+                        <li>ABORTING</li>
+                        <li>RUNNING *</li>
+                        <li>STARTING</li>
+                        <li>STOPPED</li>
+                        <li>STOPPING</li>
+                    </ul>
+                </div>
+                <div class="fragment pull-right running-extra">
+                    State
+                    <pre>"RUNNING"</pre>
+                    does not mean you can connect yet
+                    (or attach), as
+                    <pre>/sbin/init</pre>
+                    may not yet have been
+                    initialised. Wait for the IP to be assigned.
+                </div>
+                <pre style="margin-left: 20px;" class="fragment"><code class="hlbash" data-trim>lxc-info --name "$container_name" --ips --no-humanize</code></pre>
+            </section>
+            <section>
+                <p>Run individual commands (without ssh)</p>
+                <pre><code class="hlbash">lxc-attach --name "$container_name" -- apt-get update</code></pre>
+                <p>Stop the container</p>
+                <pre><code class="hlbash">lxc-stop --name "$container_name"</code></pre>
+                <p>Destroy the container</p>
+                <pre><code class="hlbash">lxc-destroy --name "$container_name"</code></pre>
+                <p>Other tools</p>
+                <ul style="font-size: 80%;">
+                    <li>lxc-ls</li>
+                    <li>lxc-info</li>
+                    <li>lxc-monitor</li>
+                    <li>lxc-snapshot</li>
+                </ul>
+            </section>
+        </section>
+        <section class="left">
+            <section>
+                <h2>Windows and Mac support?</h2>
+                <p>"Get a proper Operating System"</p>
+                <p>Docker Inc. &amp; Microsoft (and Apple?)</p>
+                <p><img src="images/xzibit-vm-in-vm.jpg"
+                        alt="Yo dog, I heard you like VMs, so we used a Linux VM in Parallels on your Mac and used a Docker VM inside Linux">
+                </p>
+            </section>
+            <section>
+                <h2>Manual solution!</h2>
+                <p>VirtualBox + Vagrant + Bash</p>
+                <p><img src="images/vagrant-virtualbox-lxc.jpg" alt="Vagrant running VM in VirtualBox which runs LXC">
+                </p>
+                <!-- todo explain flow by talking -->
+            </section>
+        </section>
+        <section class="left">
+            <h2>Puppet</h2>
+            <p>Complete server orchestration tool</p>
+            <p>Describe server state, Puppet does the rest</p>
+            <p>Auto-pull changes from server <!-- todo confirm --></p>
+            <p>Allows for same setup in all nodes</p>
+            <p>Easy changes (make changes once, apply everywhere)</p>
+            <p>Modular</p>
+            <p>Simple language</p>
+            <p>Encrypted properties</p>
+        </section>
+        <section class="left">
+            <h2>Basically do anything with your server <img src="images/devops-borat.jpg" alt="DevOps Borat tweet"
+                                                            class="pull-right"></h2>
+            <p>Install packages? <em>Easy</em></p>
+            <p>Mount volumes? <em>Yup</em></p>
+            <p>Change OS config? <em>Of course</em></p>
+            <p>
+                <del>"Provision" your pizza?</del>
+            </p>
+            <p>Something else? Find it on Puppet Forge and add it to your Puppetfile</p>
+        </section>
+        <section>
+            <h2>Demonstration (Puppet)</h2>
+        </section>
+        <section class="left">
+            <h2>What else? <img src="images/go-forth.jpg" alt="Go forth and make awesomeness" class="pull-right"></h2>
+            <p>Facter</p>
+            <p>Forge</p>
+            <p>Puppetfile</p>
+            <p>r10k/librarian</p>
+            <p>Hiera + eyaml</p>
+        </section>
+        <section class="left">
+            <h2>Conclusion? <img src="images/worked-fine-in-dev.jpg" alt="Worked fine in Dev. Ops problem now."
+                                 class="pull-right"></h2>
+            <p>Goodbye "but it works on my machine"</p>
+            <p>Different versions of software on same server</p>
+            <ul>
+                <li>Upgrading software between versions</li>
+                <li>Great for software packaged using a package manager (dpkg/rpm)</li>
+            </ul>
+            <p>Share underutilised servers</p>
+            <p>Use Jenkins</p>
+        </section>
+        <section>
+            <h2>Any questions?</h2>
+            <p><img src="images/borat-very-nice.jpg" alt="Very nice! Great Success!"></p>
+        </section>
+    </div>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.js"></script>
+
+<script>
+    Reveal.initialize({
+        history: true,
+
+        dependencies: [
+            {src: 'plugin/markdown/marked.js'},
+            {src: 'plugin/markdown/markdown.js'},
+            {src: 'plugin/notes/notes.js', async: true},
+            {
+                src: 'plugin/highlight/highlight.js', async: true, callback: function () {
+                hljs.initHighlightingOnLoad();
+            }
+            }
+        ]
+    });
+</script>
+</body>
+</html>

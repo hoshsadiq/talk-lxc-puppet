@@ -1,0 +1,26 @@
+.indent {
+    padding-left: 20px;
+}
+
+section.left {
+    text-align: left;
+}
+section.left h2, section.left p.center {
+    text-align: center;
+}
+
+.pull-right {
+    float: right;
+}
+
+.reveal div.running-extra {
+    width: 65%;
+    background: #3f3f3f;
+    margin-right: 50px;
+    padding: 0 10px;
+    font-size: 85%;
+}
+
+.running-extra pre {
+    display: inline;
+}
