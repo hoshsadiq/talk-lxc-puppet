@@ -53,3 +53,5 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
+/scripts/ssh_config
+/scripts/config
