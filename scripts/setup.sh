@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+set -x
+set -e
+
 sudo apt-get update
 sudo apt-get dist-upgrade -y
 sudo apt-get install -y build-essential linux-headers-$(uname -r)
