@@ -3,6 +3,9 @@
 set -x
 set -e
 
+sudo locale-gen en_GB.UTF-8
+
+sudo add-apt-repository -y ppa:ubuntu-lxc/lxd-stable
 sudo apt-get update
 sudo apt-get dist-upgrade -y
 sudo apt-get install -y build-essential linux-headers-$(uname -r)
