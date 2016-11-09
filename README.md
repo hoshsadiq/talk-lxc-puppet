@@ -1,5 +1,10 @@
 ## lxc-puppet-tech-talk
 
+#### Run host provisioning:
+```
+curl -L https://raw.githubusercontent.com/hoshsadiq/lxc-puppet-tech-talk/master/scripts/setup.sh | bash
+```
+
 #### Useful commands:
 
 Get ip address of a container and ssh into it (requires openssh installed and set up, see `./scripts/start.sh`) 
