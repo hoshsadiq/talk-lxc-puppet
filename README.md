@@ -1,8 +1,20 @@
 ## lxc-puppet-tech-talk
 
-#### Run host provisioning:
+#### Use
+Install a Ubuntu VM, and run the host provision script inside the Ubuntu VM
 ```
 curl -L https://raw.githubusercontent.com/hoshsadiq/lxc-puppet-tech-talk/master/scripts/setup.sh | bash
+```
+
+This will download this repository in `$HOME/lxc-puppet-tech-talk` and install all required packages.
+Now copy `scripts/config.template` to `scripts/config` and run the start script to setup a puppet agent and puppet master.
+```
+./scripts/start.sh
+```
+
+You can use destroy to tear down the infrastructure and use above start script to restart.
+```
+./scripts/destroy.sh
 ```
 
 #### Useful commands:
