@@ -2,7 +2,9 @@
 
 set -x
 
-[ -f ./config ] && source ./config
+WORKING_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+[ -f "$WORKING_DIR/config" ] && source $WORKING_DIR/config
 
 remove_container() {
 	container_name="$1"
