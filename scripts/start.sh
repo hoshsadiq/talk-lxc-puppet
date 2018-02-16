@@ -12,17 +12,17 @@ create_container() {
 	lxc-start --name "$container_name" --daemon
 	sleep 5 # todo better way of determining the container has an ip
 
-	lxc-attach --name $container_name -- mkdir /root/.ssh
+	lxc-attach --name "$container_name" -- mkdir /root/.ssh
 	cat ~/.ssh/id_rsa.pub | lxc-attach --name "$container_name" -- tee -a /root/.ssh/authorized_keys
-	lxc-attach --name $container_name -- chmod 600 /root/.ssh
-	lxc-attach --name $container_name -- apt-get update
-	lxc-attach --name $container_name -- apt-get install -y openssh-server
+	lxc-attach --name "$container_name" -- chmod 600 /root/.ssh
+	lxc-attach --name "$container_name" -- apt-get update
+	lxc-attach --name "$container_name" -- apt-get install -y openssh-server
 
 	ip_address="$(lxc-info --name "$container_name" --ips --no-humanize)"
 
-	lxc-attach --name $container_name -- wget https://apt.puppetlabs.com/puppetlabs-release-trusty.deb
-	lxc-attach --name $container_name -- dpkg -i puppetlabs-release-trusty.deb
-	lxc-attach --name $container_name -- apt-get update
+	lxc-attach --name "$container_name" -- wget https://apt.puppetlabs.com/puppetlabs-release-trusty.deb
+	lxc-attach --name "$container_name" -- dpkg -i puppetlabs-release-trusty.deb
+	lxc-attach --name "$container_name" -- apt-get update
 }
 
 get_container_ip() {
@@ -58,9 +58,9 @@ write_ssh_config() {
 setup_master() {
 	container_name="$1"
 
-	lxc-attach --name $container_name -- apt-get install -y puppetmaster-passenger
-	lxc-attach --name $container_name -- puppet resource package puppetmaster ensure=latest
-	lxc-attach --name $container_name -- sed -i "/template/s/templatedir=.*\$/dns_alt_names=puppet,$container_name/" /etc/puppet/puppet.conf
+	lxc-attach --name "$container_name" -- apt-get install -y puppetmaster-passenger
+	lxc-attach --name "$container_name" -- puppet resource package puppetmaster ensure=latest
+	lxc-attach --name "$container_name" -- sed -i "/template/s/templatedir=.*\$/dns_alt_names=puppet,$container_name/" /etc/puppet/puppet.conf
 
 	echo '---
 	:logger: puppet
@@ -71,25 +71,26 @@ setup_master() {
 	:hierarchy:
 	  - "node/%{::fqdn}"
 	  - common
-	' | lxc-attach --name $container_name -- tee /etc/puppet/hiera.yaml
-	lxc-attach --name $container_name -- mkdir -p /etc/puppet/hieradata/node
+	' | lxc-attach --name "$container_name" -- tee /etc/puppet/hiera.yaml
+	lxc-attach --name "$container_name" -- mkdir -p /etc/puppet/hieradata/node
 
 	# hiera cli is useful but cli looks for /etc/hiera.yaml rather that /etc/puppet/hiera.yaml
 	# so we make /etc/hiera.yaml link to our proper config so it's consistent
-	lxc-attach --name $container_name -- ln -nfs /etc/puppet/hiera.yaml /etc/hiera.yaml
+	lxc-attach --name "$container_name" -- ln -nfs /etc/puppet/hiera.yaml /etc/hiera.yaml
 }
 
 setup_agent() {
-	container_name="$1"
+	agent_container_name="$1"
+	master_container_name="$2"
 
-	lxc-attach --name $container_name -- apt-get install -y puppet
-	lxc-attach --name $container_name -- sed -i "/template/s/templatedir=.*\$/server=$master_container_name\nruninterval=1/" /etc/puppet/puppet.conf
-	lxc-attach --name $container_name -- sed -i '/^START=/s/no/yes/' /etc/default/puppet
-	lxc-attach --name $container_name -- sed -i '/\(^\[master\]\)/,$d' /etc/puppet/puppet.conf
+	lxc-attach --name "$agent_container_name" -- apt-get install -y puppet
+	lxc-attach --name "$agent_container_name" -- sed -i "/template/s/templatedir=.*\$/server=$master_container_name\nruninterval=1/" /etc/puppet/puppet.conf
+	lxc-attach --name "$agent_container_name" -- sed -i '/^START=/s/no/yes/' /etc/default/puppet
+	lxc-attach --name "$agent_container_name" -- sed -i '/\(^\[master\]\)/,$d' /etc/puppet/puppet.conf
 	echo "[agent]
-server = $master_container_name" | lxc-attach --name $container_name -- tee -a /etc/puppet/puppet.conf
+server = $master_container_name" | lxc-attach --name "$agent_container_name" -- tee -a /etc/puppet/puppet.conf
 
-	lxc-attach --name $container_name -- service puppet restart
+	lxc-attach --name "$agent_container_name" -- service puppet restart
 }
 
 setup_hosts() {
@@ -126,7 +127,7 @@ ip_master="$(get_container_ip $master_container_name)"
 ip_node="$(get_container_ip $agent_container_name)"
 
 setup_master "$master_container_name"
-setup_agent "$agent_container_name"
+setup_agent "$master_container_name" "$agent_container_name"
 
 write_ssh_config "$ip_master" "$ip_node"
 setup_hosts "$ip_master" "$master_container_name" "$ip_node" "$agent_container_name"
